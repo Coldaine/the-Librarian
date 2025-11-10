@@ -13,7 +13,13 @@ import json
 import re
 
 from .connection import Neo4jConnection
-from .schema import NodeLabels, RelationshipTypes
+from .schema import (
+    NodeLabels,
+    RelationshipTypes,
+    validate_node_label,
+    validate_relationship_type,
+    ALLOWED_NODE_LABELS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,22 +87,16 @@ def validate_label(label: str) -> bool:
     """
     Validate that a label is from the allowed set.
 
+    DEPRECATED: Use validate_node_label() from schema module instead.
+    Kept for backward compatibility.
+
     Args:
         label: Node label to validate
 
     Returns:
         True if valid, False otherwise
     """
-    allowed_labels = {
-        NodeLabels.ARCHITECTURE,
-        NodeLabels.DESIGN,
-        NodeLabels.REQUIREMENT,
-        NodeLabels.CODE_ARTIFACT,
-        NodeLabels.DECISION,
-        NodeLabels.AGENT_REQUEST
-    }
-
-    return label in allowed_labels
+    return label in ALLOWED_NODE_LABELS
 
 
 def validate_relationship_type(rel_type: str) -> bool:
@@ -150,9 +150,8 @@ class GraphOperations:
         Raises:
             ValueError: If node already exists or required properties missing
         """
-        # Validate label
-        if not validate_label(label):
-            raise ValueError(f"Invalid node label: {label}")
+        # Validate label (prevents Cypher injection)
+        validate_node_label(label)
 
         # Sanitize properties
         properties = sanitize_cypher_params(properties)
@@ -214,6 +213,9 @@ class GraphOperations:
         Returns:
             Dictionary of node properties, or None if not found
         """
+        # Validate label (prevents Cypher injection)
+        validate_node_label(label)
+
         query = f"""
         MATCH (n:{label} {{{id_property}: $node_id}})
         RETURN n
@@ -244,6 +246,9 @@ class GraphOperations:
         Returns:
             True if updated successfully, False if node not found
         """
+        # Validate label (prevents Cypher injection)
+        validate_node_label(label)
+
         # Update modified_at timestamp
         if label in [NodeLabels.ARCHITECTURE, NodeLabels.DESIGN]:
             properties["modified_at"] = datetime.utcnow().isoformat()
@@ -287,6 +292,9 @@ class GraphOperations:
             In production, consider marking nodes as deprecated instead of deleting
             to maintain immutable audit trail.
         """
+        # Validate label (prevents Cypher injection)
+        validate_node_label(label)
+
         detach_clause = "DETACH" if detach else ""
 
         query = f"""

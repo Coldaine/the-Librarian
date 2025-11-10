@@ -4,13 +4,21 @@ Graph database configuration management.
 Loads configuration from environment variables using Pydantic BaseSettings.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from typing import Optional
 
 
 class GraphConfig(BaseSettings):
     """Configuration for Neo4j graph database connection."""
+
+    # Pydantic V2 configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"
+    )
 
     # Neo4j Connection
     neo4j_uri: str = Field(
@@ -33,21 +41,21 @@ class GraphConfig(BaseSettings):
     # Connection Pool Settings
     max_connection_lifetime: int = Field(
         default=3600,
-        description="Maximum connection lifetime in seconds"
+        description="Maximum connection lifetime in seconds (default: 1 hour)"
     )
     max_connection_pool_size: int = Field(
         default=50,
-        description="Maximum connection pool size"
+        description="Maximum connection pool size (default: 50 connections)"
     )
     connection_acquisition_timeout: int = Field(
         default=60,
-        description="Connection acquisition timeout in seconds"
+        description="Connection acquisition timeout in seconds (default: 60s)"
     )
 
     # Vector Configuration
     vector_dimensions: int = Field(
         default=768,
-        description="Embedding vector dimensions"
+        description="Embedding vector dimensions (nomic-embed-text: 768)"
     )
     vector_similarity_function: str = Field(
         default="cosine",
@@ -57,14 +65,8 @@ class GraphConfig(BaseSettings):
     # Query Settings
     query_timeout: int = Field(
         default=30000,
-        description="Query execution timeout in milliseconds"
+        description="Query execution timeout in milliseconds (default: 30s)"
     )
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        extra = "ignore"
 
 
 # Global config instance
