@@ -497,7 +497,7 @@ uv run pytest --pdb
 ## Additional Resources
 
 - [UV Setup Guide](UV_SETUP.md)
-- [API Documentation](API_QUICK_START.md)
-- [Quick Start Guide](QUICK_START.md)
+- [API Documentation](docs/api/QUICK_START.md)
+- [Graph Setup Guide](docs/graph/SETUP.md)
 - [Integration Architecture](docs/integration_architecture.md)
 - [UV Official Docs](https://docs.astral.sh/uv/)

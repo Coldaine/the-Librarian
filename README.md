@@ -53,8 +53,8 @@ uv run uvicorn src.main:app --host 127.0.0.1 --port 8000
 ## Documentation
 
 See the following guides:
-- [Quick Start Guide](QUICK_START.md)
-- [API Documentation](API_QUICK_START.md)
+- [Graph Setup Guide](docs/graph/SETUP.md)
+- [API Documentation](docs/api/QUICK_START.md)
 - [Integration Architecture](docs/integration_architecture.md)
 
 ## Development

@@ -334,5 +334,6 @@ Create missing indexes via `VectorOperations.create_vector_index()`.
 
 - **UV_SETUP.md**: Comprehensive UV package manager guide
 - **AGENTS.md**: Agent coordination and parallel development workflows
-- **API_QUICK_START.md**: API endpoint documentation
+- **docs/api/QUICK_START.md**: API endpoint documentation
+- **docs/graph/SETUP.md**: Neo4j setup and graph module guide
 - **docs/integration_architecture.md**: Detailed integration patterns
