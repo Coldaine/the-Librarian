@@ -41,6 +41,10 @@ env.bak/
 venv.bak/
 .venv/
 
+# UV package manager
+# Note: uv.lock should be committed for reproducible builds
+.uv_cache/
+
 # PyInstaller
 *.manifest
 *.spec
