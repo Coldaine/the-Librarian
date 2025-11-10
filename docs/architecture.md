@@ -117,9 +117,34 @@ Development Tools:
 
 ### Deployment Architecture
 
+**Phase 0-2 (Development)**: Native Windows Installation
+```yaml
+development:
+  type: native-windows
+  components:
+    neo4j:
+      tool: Neo4j Desktop
+      ports: [7474, 7687]
+      location: local-application
+
+    ollama:
+      tool: Ollama for Windows
+      port: 11434
+      location: C:\Users\{user}\.ollama
+
+    librarian-api:
+      runtime: python 3.11+
+      port: 8000
+      command: uvicorn src.main:app --reload
+      environment:
+        - NEO4J_URI=bolt://localhost:7687
+        - OLLAMA_HOST=http://localhost:11434
+```
+
+**Phase 3 (Production Deployment)**: Docker Compose
 ```yaml
 deployment:
-  type: single-machine
+  type: single-machine-containerized
   containers:
     neo4j:
       image: neo4j:5-community
@@ -143,6 +168,8 @@ deployment:
       volumes:
         - ./ollama:/root/.ollama
 ```
+
+**Rationale**: Native development provides faster iteration and easier debugging. Docker containerization happens in Phase 3 for production deployment and portability.
 
 ## Data Model
 
@@ -424,21 +451,45 @@ class ValidationRules:
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+### Phase 0: Development Setup (1-2 days)
+**Goal**: Local development environment ready
+
+**Development Approach**: Native Windows installation (no Docker initially)
+
+- [ ] Install Neo4j Desktop (GUI for Windows)
+- [ ] Install Ollama for Windows
+- [ ] Create Python project structure (src/, tests/, config/)
+- [ ] Write requirements.txt with dependencies
+- [ ] Setup virtual environment
+- [ ] Create .env.template for configuration
+- [ ] Initialize Neo4j database with schema
+- [ ] Verify Ollama embedding model works
+- [ ] Document native setup in README.md
+
+**Success Criteria**: Can run `python -m pytest` and connect to local Neo4j
+
+**Why Native First?**
+- Easier debugging (no container layers)
+- Neo4j Desktop provides visual graph explorer
+- Faster iteration cycle
+- No Docker learning curve
+- Direct access to logs and processes
+
+### Phase 1: Foundation (Week 1-2)
 **Goal**: Basic agent control system operational
 
-- [ ] Deploy Neo4j with Docker
-- [ ] Create graph schema and vector indexes
+- [ ] Implement graph operations module (Neo4j driver wrapper)
+- [ ] Create vector index and embedding integration
+- [ ] Build document ingestion pipeline
 - [ ] Implement FastAPI service structure
-- [ ] Build basic ingestion pipeline
 - [ ] Create agent request/approval endpoints
-- [ ] Implement immutable logging to graph
-- [ ] Add semantic search capability
-- [ ] Write integration tests
+- [ ] Add immutable logging to graph
+- [ ] Implement semantic search capability
+- [ ] Write unit and integration tests
 
-**Success Criteria**: Can reject non-compliant agent requests
+**Success Criteria**: Can ingest documents, query semantically, and reject non-compliant agent requests
 
-### Phase 2: Agent Governance (Week 2)
+### Phase 2: Agent Governance (Week 3-4)
 **Goal**: Full agent coordination working
 
 - [ ] Implement all validation rules
@@ -447,21 +498,31 @@ class ValidationRules:
 - [ ] Build agent context assembly
 - [ ] Add decision tracking
 - [ ] Implement escalation workflows
-- [ ] Create agent interaction tests
+- [ ] Create end-to-end agent workflow tests
+- [ ] Add comprehensive error handling
 
-**Success Criteria**: Agents follow consistent patterns when using system
+**Success Criteria**: Agents can request approval, get context, and report completion with full audit trail
 
-### Phase 3: Production Hardening (Optional)
-**Goal**: Enhanced reliability and features
+### Phase 3: Production Ready (Week 5+)
+**Goal**: Deployable system with operational features
 
-- [ ] Add file monitoring with watchdog
-- [ ] Implement caching layer
-- [ ] Add batch processing for documents
-- [ ] Create admin UI (optional)
-- [ ] Add performance monitoring
-- [ ] Implement backup/recovery
+**Deployment Containerization**:
+- [ ] Create Dockerfile for FastAPI application
+- [ ] Write docker-compose.yml for all services
+- [ ] Create deployment scripts (deploy.sh, update.sh)
+- [ ] Implement backup/recovery procedures
+- [ ] Add health checks and monitoring endpoints
+- [ ] Create operational runbooks
+- [ ] Test deployment on clean machine
 
-**Success Criteria**: System handles continuous agent use reliably
+**Enhanced Features**:
+- [ ] Add file monitoring with watchdog (optional)
+- [ ] Implement caching layer for frequently accessed documents
+- [ ] Add batch document processing
+- [ ] Create performance monitoring dashboard (optional)
+- [ ] Implement scheduled maintenance tasks
+
+**Success Criteria**: Can deploy with `docker-compose up` on any machine and system runs reliably under continuous use
 
 ## Validation Queries
 

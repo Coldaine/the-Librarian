@@ -288,9 +288,24 @@ GET  /health
 
 ### 8. Deployment Strategy
 
-**Decision**: **Docker Compose single-machine deployment**
+**Decision**: **Phased deployment approach - Native development first, Docker for production**
 
-**Architecture**:
+**Phase 0-2 (Development)**: Native Windows Installation
+```yaml
+components:
+  neo4j: Neo4j Desktop (GUI app)
+  ollama: Ollama for Windows
+  api: Python 3.11+ with uvicorn
+
+setup:
+  - Install Neo4j Desktop from neo4j.com/download
+  - Install Ollama from ollama.ai/download
+  - python -m venv venv
+  - pip install -r requirements.txt
+  - uvicorn src.main:app --reload
+```
+
+**Phase 3 (Production)**: Docker Compose
 ```yaml
 services:
   neo4j:
@@ -307,25 +322,34 @@ services:
 ```
 
 **Rationale**:
-- Personal project = single user, local development
-- Docker Compose = simple orchestration, reproducible setup
-- All services on one machine = low latency, no network complexity
-- Can scale to multi-machine later if needed (unlikely)
+- **Native development provides**:
+  - Faster iteration (no container rebuild)
+  - Easier debugging (direct process access)
+  - Neo4j Desktop GUI for graph exploration
+  - Simpler learning curve
+  - Direct log access
+- **Docker for deployment provides**:
+  - Reproducible setup across machines
+  - Container isolation
+  - Simple orchestration
+  - Easy backup (volume snapshots)
 
 **Alternatives Considered**:
+- **Docker from day one**: Start with containers
+  - **Deferred because**: Adds complexity during rapid development phase; debugging is harder through container layers
 - **Kubernetes**: Container orchestration platform
   - **Rejected because**: Massive overkill for single machine
 - **Serverless** (Lambda, Cloud Functions): Pay-per-use
   - **Rejected because**: Adds cloud dependency; stateful graph DB doesn't fit serverless model
-- **Bare metal installation**: No containers
-  - **Rejected because**: Harder to reproduce, no isolation
+- **Permanent native-only**: Never containerize
+  - **Rejected because**: Harder to deploy to other machines later
 
 **Consequences**:
-- ✅ Simple setup and teardown
-- ✅ Reproducible across machines
-- ✅ Container isolation (won't conflict with other services)
-- ✅ Easy backup (just copy volumes)
-- ⚠️ Requires Docker installed (acceptable requirement)
+- ✅ Faster initial development without Docker overhead
+- ✅ Can visualize graph data with Neo4j Desktop during development
+- ✅ Easier onboarding (fewer tools to install initially)
+- ✅ Production deployment remains portable via Docker
+- ⚠️ Need to test Docker deployment in Phase 3 (acceptable tradeoff)
 
 ### 9. RAG Framework Integration
 
