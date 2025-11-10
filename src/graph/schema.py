@@ -57,6 +57,7 @@ class RelationshipTypes:
     REVIEWED = "REVIEWED"
     AUTHORED = "AUTHORED"
     CREATED_FROM = "CREATED_FROM"
+    CONTAINS = "CONTAINS"
 
 
 # Allowed relationship types whitelist (for security - prevent Cypher injection)
@@ -76,6 +77,7 @@ ALLOWED_RELATIONSHIP_TYPES = {
     RelationshipTypes.REVIEWED,
     RelationshipTypes.AUTHORED,
     RelationshipTypes.CREATED_FROM,
+    RelationshipTypes.CONTAINS,
 }
 
 

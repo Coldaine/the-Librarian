@@ -151,12 +151,11 @@ class DocumentGraphAdapter:
                 await self.graph_ops.create_relationship(
                     from_label=document_label,
                     from_id=document_id,
-                    rel_type=RelationshipTypes.REFERENCES,  # Using REFERENCES for CONTAINS
+                    rel_type=RelationshipTypes.CONTAINS,
                     to_label="Chunk",
                     to_id=chunk_id,
                     properties={
-                        "chunk_index": idx,
-                        "relationship_type": "CONTAINS"
+                        "chunk_index": idx
                     },
                     from_id_prop="id",
                     to_id_prop="id"
@@ -217,8 +216,7 @@ class DocumentGraphAdapter:
             List of chunk properties
         """
         query = f"""
-        MATCH (d:{document_label} {{id: $doc_id}})-[r:REFERENCES]->(c:Chunk)
-        WHERE r.relationship_type = 'CONTAINS'
+        MATCH (d:{document_label} {{id: $doc_id}})-[r:CONTAINS]->(c:Chunk)
         RETURN c
         ORDER BY r.chunk_index
         """

@@ -53,6 +53,10 @@ class TestCypherInjectionPrevention:
         """Test that the IMPLEMENTS relationship specifically is accepted."""
         validate_relationship_type("IMPLEMENTS")
 
+    def test_contains_relationship_accepted(self):
+        """Test that the CONTAINS relationship specifically is accepted."""
+        validate_relationship_type("CONTAINS")
+
     def test_invalid_relationship_type_rejected(self):
         """Test that invalid relationship types are rejected."""
         invalid_rels = [
@@ -73,7 +77,7 @@ class TestCypherInjectionPrevention:
     def test_relationship_whitelist_not_empty(self):
         """Test that relationship whitelist is not empty (prevents accidental deletion)."""
         assert len(ALLOWED_RELATIONSHIP_TYPES) > 0, "Relationship whitelist must not be empty"
-        assert len(ALLOWED_RELATIONSHIP_TYPES) >= 10, "Relationship whitelist should contain at least 10 core types"
+        assert len(ALLOWED_RELATIONSHIP_TYPES) >= 16, "Relationship whitelist should contain at least 16 core types (including CONTAINS)"
 
     def test_case_sensitive_label_validation(self):
         """Test that label validation is case-sensitive."""

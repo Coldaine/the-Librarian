@@ -330,6 +330,97 @@ class VectorOperations:
         logger.info(f"Stored {count}/{len(embeddings_data)} embeddings successfully")
         return count
 
+    async def semantic_search(self, query_embedding: List[float],
+                             limit: int = 10,
+                             doc_type: Optional[str] = None,
+                             threshold: float = 0.0) -> List[Dict[str, Any]]:
+        """
+        Perform semantic search on chunks, returning chunk-level results with parent document context.
+
+        This is the primary search method for production use, searching across all Chunk nodes
+        and returning fine-grained results with document context.
+
+        Args:
+            query_embedding: Query embedding vector (768 dimensions)
+            limit: Maximum number of chunks to return
+            doc_type: Optional document type filter ("architecture", "design", etc.)
+            threshold: Minimum similarity score (0.0 to 1.0)
+
+        Returns:
+            List of dictionaries containing:
+                - chunk_id: Unique chunk identifier
+                - chunk_content: The matching chunk text
+                - chunk_index: Position within parent document
+                - section_title: Section the chunk belongs to
+                - doc_id: Parent document ID
+                - doc_title: Parent document title
+                - doc_type: Document type
+                - score: Similarity score
+
+        Raises:
+            ValueError: If embedding dimensions don't match configuration
+        """
+        if len(query_embedding) != self.config.vector_dimensions:
+            raise ValueError(
+                f"Query embedding dimension mismatch: expected {self.config.vector_dimensions}, "
+                f"got {len(query_embedding)}"
+            )
+
+        # Build Cypher query to search chunks and get parent document info
+        query = """
+        CALL db.index.vector.queryNodes('chunk_embedding', $limit * 2, $embedding)
+        YIELD node, score
+        WHERE score > $threshold
+
+        // Get parent document
+        MATCH (doc)-[:CONTAINS]->(node)
+        WHERE $doc_type IS NULL OR node.doc_type = $doc_type
+
+        RETURN
+            node.id as chunk_id,
+            node.content as chunk_content,
+            node.chunk_index as chunk_index,
+            node.section_title as section_title,
+            node.section_level as section_level,
+            doc.id as doc_id,
+            doc.title as doc_title,
+            doc.doc_type as doc_type,
+            doc.version as doc_version,
+            score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+
+        try:
+            results = await self.conn.execute_read(query, {
+                "embedding": query_embedding,
+                "limit": limit,
+                "threshold": threshold,
+                "doc_type": doc_type
+            })
+
+            formatted_results = []
+            for record in results:
+                formatted_results.append({
+                    "chunk_id": record["chunk_id"],
+                    "chunk_content": record["chunk_content"],
+                    "chunk_index": record["chunk_index"],
+                    "section_title": record["section_title"],
+                    "section_level": record["section_level"],
+                    "doc_id": record["doc_id"],
+                    "doc_title": record["doc_title"],
+                    "doc_type": record["doc_type"],
+                    "doc_version": record["doc_version"],
+                    "score": record["score"]
+                })
+
+            logger.info(f"Semantic search returned {len(formatted_results)} chunks across documents")
+            return formatted_results
+
+        except Exception as e:
+            logger.error(f"Semantic search failed: {e}")
+            raise
+
     def cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """
         Calculate cosine similarity between two vectors.
