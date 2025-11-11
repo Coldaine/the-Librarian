@@ -621,6 +621,27 @@ drift_tolerance: none | minor | moderate
 ---
 ```
 
+## Extended Capabilities
+
+### Repository Portfolio Management
+The Librarian's graph database can be extended to support **portfolio-wide repository tracking and analysis**. In this model:
+
+**The Librarian Provides**:
+- Graph schema for `Repository`, `AnalysisRun`, `AnalysisResult`, `ProjectHealth`, and `Sprint` nodes
+- API endpoints for storing and querying repository metadata
+- Historical tracking of repository health scores over time
+- Query capabilities for portfolio intelligence
+
+**External Agent Systems (Colossus, Watchmen) Provide**:
+- Repository discovery and analysis orchestration
+- Invocation of analysis tools (Perplexity via web automation, static analyzers, etc.)
+- Sprint planning and coordination workflows
+- Submission of analysis results to the Librarian's API
+
+This separation of concerns allows the Librarian to remain focused on its core strength: **data storage, relationship management, and query capabilities**, while external systems handle orchestration and analysis.
+
+See [`docs/subdomains/repository-portfolio-management.md`](./subdomains/repository-portfolio-management.md) for detailed specifications.
+
 ## Future Considerations
 
 ### Potential Enhancements (Not Phase 1)

@@ -6,6 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Librarian is an **AI Agent Governance System** that manages document ingestion, validation, and semantic search using Neo4j knowledge graphs and local LLM embeddings. It implements a specification-driven development approach with immutable audit trails for all governance decisions.
 
+### Extended Capabilities: Repository Portfolio Management
+
+The Librarian's graph database also supports **portfolio-wide repository tracking**, where external agent systems (Colossus, Watchmen) submit repository analysis results for storage and querying.
+
+**The Librarian's Role**:
+- **Data storage layer only** - Provides Neo4j graph schema and API endpoints
+- Stores repository metadata, analysis results, health scores, and sprint assignments
+- Provides query capabilities for portfolio intelligence
+- **Does NOT run analysis** - External systems handle that
+
+**External Systems' Role** (Colossus/Watchmen):
+- Run repository analysis via Perplexity (using MCP stealth-browser)
+- Orchestrate analysis scheduling and coordination
+- Submit results to the Librarian's API
+
+**Key Principle**: The Librarian is a **passive data store with query capabilities**, not an analysis orchestrator.
+
+See [`docs/subdomains/repository-portfolio-management.md`](docs/subdomains/repository-portfolio-management.md) for full details.
+
 ## Development Commands
 
 ### Environment Setup

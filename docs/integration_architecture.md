@@ -431,3 +431,223 @@ Batch 2: [11, 12]                         ──▶ Ollama
 ✓ **Error Isolation**: Failures don't cascade
 ✓ **Type Safety**: Pydantic models throughout
 ✓ **Async Compatible**: No blocking operations
+
+## Extended Integration: Portfolio Management
+
+### External System Integration Pattern
+
+The Librarian can serve as a **data storage layer** for external agent systems (Colossus, Watchmen) that perform repository portfolio analysis.
+
+```
+┌─────────────────────────────────────────────────┐
+│      External Agent Systems                      │
+│      (Colossus / Watchmen)                       │
+│                                                   │
+│  ┌────────────────────────────────────────┐      │
+│  │  Repository Discovery                  │      │
+│  │  - GitHub API calls                    │      │
+│  │  - Clone/update local copies           │      │
+│  └──────────┬─────────────────────────────┘      │
+│             │                                     │
+│             ▼                                     │
+│  ┌────────────────────────────────────────┐      │
+│  │  Analysis Orchestration                │      │
+│  │  - Invoke Perplexity via web           │      │
+│  │  - Parse analysis results              │      │
+│  │  - Calculate health scores             │      │
+│  └──────────┬─────────────────────────────┘      │
+└─────────────┼─────────────────────────────────────┘
+              │ HTTP POST
+              │ (analysis results)
+              ▼
+┌─────────────────────────────────────────────────┐
+│      The Librarian API                          │
+│                                                  │
+│  POST /repositories/{id}/analysis               │
+│  POST /repositories/{id}/health                 │
+│  POST /sprints                                  │
+│                                                  │
+│  ┌────────────────────────────────────────┐     │
+│  │  API Layer (FastAPI)                   │     │
+│  │  - Validate incoming data              │     │
+│  │  - Transform to graph nodes            │     │
+│  └──────────┬─────────────────────────────┘     │
+│             │                                    │
+│             ▼                                    │
+│  ┌────────────────────────────────────────┐     │
+│  │  Graph Operations                      │     │
+│  │  - Create Repository nodes             │     │
+│  │  - Create AnalysisRun nodes            │     │
+│  │  - Create ProjectHealth nodes          │     │
+│  │  - Link relationships                  │     │
+│  └──────────┬─────────────────────────────┘     │
+│             │                                    │
+│             ▼                                    │
+│  ┌────────────────────────────────────────┐     │
+│  │  Neo4j Graph                           │     │
+│  │  (Repository) → (AnalysisRun)          │     │
+│  │  (Repository) → (ProjectHealth)        │     │
+│  │  (Repository) → (Architecture)         │     │
+│  │  (Sprint) → (Repository)               │     │
+│  └────────────────────────────────────────┘     │
+└──────────────────────────────────────────────────┘
+              │
+              │ HTTP GET (queries)
+              ▼
+┌─────────────────────────────────────────────────┐
+│      External Systems / Users                    │
+│                                                  │
+│  GET /repositories?health<50                    │
+│  GET /repositories/{id}/health                  │
+│  POST /query/portfolio (custom Cypher)          │
+└──────────────────────────────────────────────────┘
+```
+
+### Data Flow: Repository Analysis Submission
+
+```
+External Agent (Colossus)
+       │
+       │ (1) Analyze repository via Perplexity
+       ▼
+┌──────────────────────┐
+│  Analysis Results    │
+│  {                   │
+│    repo_id: "...",   │
+│    scores: {...},    │
+│    findings: [...]   │
+│  }                   │
+└──────┬───────────────┘
+       │
+       │ (2) HTTP POST to Librarian API
+       ▼
+┌─────────────────────────────┐
+│  POST /repositories/        │
+│       {repo_id}/analysis    │
+│                             │
+│  Request Body:              │
+│  {                          │
+│    timestamp: "...",        │
+│    tool: "perplexity",      │
+│    code_quality: 85,        │
+│    doc_quality: 70,         │
+│    test_coverage: 65,       │
+│    security_score: 90,      │
+│    findings: [              │
+│      {                      │
+│        category: "...",     │
+│        severity: "...",     │
+│        message: "..."       │
+│      }                      │
+│    ]                        │
+│  }                          │
+└──────┬──────────────────────┘
+       │
+       │ (3) API validates and transforms
+       ▼
+┌─────────────────────────────┐
+│  GraphOperations            │
+│                             │
+│  CREATE (r:Repository)      │
+│  CREATE (a:AnalysisRun)     │
+│  CREATE (h:ProjectHealth)   │
+│  CREATE (a)-[:PRODUCED]->   │
+│         (result:            │
+│          AnalysisResult)    │
+│  CREATE (r)-[:HAS_HEALTH]-> │
+│         (h)                 │
+└──────┬──────────────────────┘
+       │
+       │ (4) Store in Neo4j
+       ▼
+┌─────────────────────────────┐
+│   Neo4j Graph               │
+│                             │
+│  (Repository)               │
+│       ↓                     │
+│  (AnalysisRun)              │
+│       ↓                     │
+│  (AnalysisResult)           │
+│       ↓                     │
+│  (ProjectHealth)            │
+└─────────────────────────────┘
+```
+
+### API Contract for External Systems
+
+**Submit Analysis Results**:
+```python
+POST /repositories/{repo_id}/analysis
+
+Request:
+{
+  "timestamp": "2024-11-10T12:00:00Z",
+  "tool": "perplexity",
+  "status": "completed",
+  "duration_seconds": 45.2,
+  "scores": {
+    "code_quality": 85,
+    "documentation": 70,
+    "test_coverage": 65,
+    "security": 90,
+    "maintenance_burden": "medium"
+  },
+  "findings": [
+    {
+      "category": "security",
+      "severity": "warning",
+      "message": "Dependency X has known vulnerabilities",
+      "file_path": "requirements.txt",
+      "recommendation": "Update to version Y"
+    }
+  ]
+}
+
+Response:
+{
+  "analysis_id": "analysis_abc123",
+  "repository_id": "repo_xyz789",
+  "stored_at": "2024-11-10T12:00:01Z",
+  "nodes_created": 15,
+  "relationships_created": 18
+}
+```
+
+**Query Portfolio Health**:
+```python
+GET /portfolio/health
+
+Response:
+{
+  "total_repositories": 42,
+  "average_health": 78.5,
+  "critical_issues": 3,
+  "repositories_needing_attention": [
+    {
+      "id": "repo_123",
+      "name": "legacy-app",
+      "health_score": 45,
+      "last_analyzed": "2024-11-09T00:00:00Z",
+      "critical_findings": 2
+    }
+  ]
+}
+```
+
+### Separation of Concerns
+
+| Concern | Owner | Responsibility |
+|---------|-------|----------------|
+| **Repository Discovery** | External Systems | GitHub API, cloning, updates |
+| **Analysis Execution** | External Systems | Perplexity invocation, result parsing |
+| **Sprint Coordination** | External Systems | Planning, prioritization, notification |
+| **Data Storage** | The Librarian | Neo4j graph management |
+| **Query API** | The Librarian | Portfolio intelligence queries |
+| **Historical Tracking** | The Librarian | Time-series health data |
+| **Graph Relationships** | The Librarian | Cross-repository connections |
+
+This separation allows:
+- The Librarian to focus on its core strength: **data management**
+- External systems to evolve analysis strategies independently
+- Multiple external systems to share the same data store
+- Clear API contracts between systems
