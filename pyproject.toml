@@ -23,6 +23,10 @@ dependencies = [
     # Numerical Operations
     "numpy>=1.24.3,<2.0.0",
 
+    # Document Processing
+    "python-frontmatter>=1.0.0",
+    "tiktoken>=0.5.1",
+
     # Embedding Generation
     "ollama>=0.1.6",
 

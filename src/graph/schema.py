@@ -26,6 +26,19 @@ class NodeLabels:
     CHUNK = "Chunk"
 
 
+# Allowed node labels whitelist (for security - prevent Cypher injection)
+ALLOWED_NODE_LABELS = {
+    NodeLabels.ARCHITECTURE,
+    NodeLabels.DESIGN,
+    NodeLabels.REQUIREMENT,
+    NodeLabels.CODE_ARTIFACT,
+    NodeLabels.DECISION,
+    NodeLabels.AGENT_REQUEST,
+    NodeLabels.PERSON,
+    NodeLabels.CHUNK,
+}
+
+
 # Relationship type constants
 class RelationshipTypes:
     """Relationship type constants for type safety."""
@@ -44,6 +57,66 @@ class RelationshipTypes:
     REVIEWED = "REVIEWED"
     AUTHORED = "AUTHORED"
     CREATED_FROM = "CREATED_FROM"
+    CONTAINS = "CONTAINS"
+
+
+# Allowed relationship types whitelist (for security - prevent Cypher injection)
+ALLOWED_RELATIONSHIP_TYPES = {
+    RelationshipTypes.DEFINES,
+    RelationshipTypes.IMPLEMENTS,
+    RelationshipTypes.SATISFIES,
+    RelationshipTypes.SUPERSEDES,
+    RelationshipTypes.DERIVED_FROM,
+    RelationshipTypes.INVALIDATES,
+    RelationshipTypes.TARGETS,
+    RelationshipTypes.REFERENCES,
+    RelationshipTypes.RESULTED_IN,
+    RelationshipTypes.APPROVES,
+    RelationshipTypes.REJECTS,
+    RelationshipTypes.OWNS,
+    RelationshipTypes.REVIEWED,
+    RelationshipTypes.AUTHORED,
+    RelationshipTypes.CREATED_FROM,
+    RelationshipTypes.CONTAINS,
+}
+
+
+def validate_node_label(label: str) -> None:
+    """
+    Validate that node label is in the allowed whitelist.
+
+    Prevents Cypher injection by ensuring only known labels are used in queries.
+
+    Args:
+        label: Node label to validate
+
+    Raises:
+        ValueError: If label is not in whitelist
+    """
+    if label not in ALLOWED_NODE_LABELS:
+        raise ValueError(
+            f"Invalid node label: '{label}'. "
+            f"Allowed labels: {', '.join(sorted(ALLOWED_NODE_LABELS))}"
+        )
+
+
+def validate_relationship_type(rel_type: str) -> None:
+    """
+    Validate that relationship type is in the allowed whitelist.
+
+    Prevents Cypher injection by ensuring only known relationship types are used in queries.
+
+    Args:
+        rel_type: Relationship type to validate
+
+    Raises:
+        ValueError: If relationship type is not in whitelist
+    """
+    if rel_type not in ALLOWED_RELATIONSHIP_TYPES:
+        raise ValueError(
+            f"Invalid relationship type: '{rel_type}'. "
+            f"Allowed types: {', '.join(sorted(ALLOWED_RELATIONSHIP_TYPES))}"
+        )
 
 
 # Schema creation queries

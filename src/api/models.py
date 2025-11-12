@@ -1,22 +1,15 @@
 """Pydantic models for API request/response validation."""
 
 from typing import List, Dict, Any, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
 class AgentRequestModel(BaseModel):
     """Request model for agent approval."""
-    agent_id: str = Field(..., description="ID of the agent making the request")
-    action: Literal["create", "modify", "delete"] = Field(..., description="Type of action")
-    target_type: Literal["architecture", "design", "code"] = Field(..., description="Type of target")
-    target_id: Optional[str] = Field(None, description="ID of target if modifying/deleting")
-    content: str = Field(..., description="Content of the change")
-    rationale: str = Field(..., description="Reason for the change")
-    references: List[str] = Field(default_factory=list, description="IDs of specs consulted")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "agent_id": "agent-001",
                 "action": "create",
@@ -26,6 +19,15 @@ class AgentRequestModel(BaseModel):
                 "references": ["arch-001", "arch-002"]
             }
         }
+    )
+
+    agent_id: str = Field(..., description="ID of the agent making the request")
+    action: Literal["create", "modify", "delete"] = Field(..., description="Type of action")
+    target_type: Literal["architecture", "design", "code"] = Field(..., description="Type of target")
+    target_id: Optional[str] = Field(None, description="ID of target if modifying/deleting")
+    content: str = Field(..., description="Content of the change")
+    rationale: str = Field(..., description="Reason for the change")
+    references: List[str] = Field(default_factory=list, description="IDs of specs consulted")
 
 
 class AgentResponseModel(BaseModel):

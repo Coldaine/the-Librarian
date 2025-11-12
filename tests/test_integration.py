@@ -190,6 +190,202 @@ class TestDocumentAdapter:
         assert chunk_id_1 == chunk_id_3  # Deterministic
         assert len(chunk_id_1) == 16  # MD5 hash truncated
 
+    @pytest.mark.asyncio
+    async def test_store_chunks_with_embeddings(self, sample_document):
+        """Test storing chunks with embeddings and CONTAINS relationships."""
+        from unittest.mock import AsyncMock, MagicMock
+        from src.processing.models import ProcessedChunk
+
+        # Create mock operations
+        graph_ops = AsyncMock()
+        vector_ops = AsyncMock()
+        adapter = DocumentGraphAdapter(graph_ops, vector_ops)
+
+        # Create test chunks
+        chunks = [
+            ProcessedChunk(
+                content="First chunk content",
+                start_index=0,
+                end_index=100,
+                section_title="Overview",
+                section_level=1,
+                embedding=[0.1] * 768,
+                metadata={}
+            ),
+            ProcessedChunk(
+                content="Second chunk content",
+                start_index=100,
+                end_index=200,
+                section_title="Details",
+                section_level=2,
+                embedding=[0.2] * 768,
+                metadata={}
+            )
+        ]
+
+        # Call _store_chunks
+        count = await adapter._store_chunks(
+            document_id="ARCH-001",
+            document_label="Architecture",
+            chunks=chunks,
+            document=sample_document
+        )
+
+        # Verify chunks were created
+        assert count == 2
+        assert graph_ops.create_node.call_count == 2
+
+        # Verify first chunk creation
+        first_call = graph_ops.create_node.call_args_list[0]
+        assert first_call[1]["label"] == "Chunk"
+        chunk_props = first_call[1]["properties"]
+        assert chunk_props["content"] == "First chunk content"
+        assert chunk_props["chunk_index"] == 0
+        assert chunk_props["section_title"] == "Overview"
+        assert chunk_props["doc_type"] == "architecture"
+
+        # Verify embeddings were stored
+        assert vector_ops.store_embedding.call_count == 2
+
+        # Verify CONTAINS relationships were created
+        assert graph_ops.create_relationship.call_count == 2
+        rel_call = graph_ops.create_relationship.call_args_list[0]
+        assert rel_call[1]["rel_type"] == "CONTAINS"
+        assert rel_call[1]["from_label"] == "Architecture"
+        assert rel_call[1]["to_label"] == "Chunk"
+
+    @pytest.mark.asyncio
+    async def test_get_document_chunks(self):
+        """Test retrieving chunks for a document."""
+        from unittest.mock import AsyncMock
+
+        # Create mock operations
+        graph_ops = AsyncMock()
+        graph_ops.query.return_value = [
+            {"c": {"id": "chunk_1", "content": "First chunk", "chunk_index": 0}},
+            {"c": {"id": "chunk_2", "content": "Second chunk", "chunk_index": 1}}
+        ]
+
+        vector_ops = AsyncMock()
+        adapter = DocumentGraphAdapter(graph_ops, vector_ops)
+
+        # Get chunks
+        chunks = await adapter.get_document_chunks(
+            document_id="ARCH-001",
+            document_label="Architecture"
+        )
+
+        # Verify query was called
+        assert graph_ops.query.called
+        query_call = graph_ops.query.call_args
+        assert "CONTAINS" in query_call[0][0]  # Check CONTAINS in query
+        assert query_call[0][1]["doc_id"] == "ARCH-001"
+
+        # Verify chunks returned
+        assert len(chunks) == 2
+        assert chunks[0]["content"] == "First chunk"
+        assert chunks[1]["content"] == "Second chunk"
+
+
+class TestChunkSemanticSearch:
+    """Test chunk-based semantic search."""
+
+    @pytest.mark.asyncio
+    async def test_semantic_search_returns_chunks_with_context(self):
+        """Test that semantic_search returns chunk-level results with parent document context."""
+        from unittest.mock import AsyncMock, MagicMock
+        from src.graph.vector_ops import VectorOperations
+        from src.graph.connection import Neo4jConnection
+
+        # Create mock connection
+        mock_conn = AsyncMock(spec=Neo4jConnection)
+        mock_conn.execute_read.return_value = [
+            {
+                "chunk_id": "chunk_1",
+                "chunk_content": "Authentication implementation details",
+                "chunk_index": 0,
+                "section_title": "Authentication",
+                "section_level": 2,
+                "doc_id": "ARCH-001",
+                "doc_title": "System Architecture",
+                "doc_type": "architecture",
+                "doc_version": "1.0.0",
+                "score": 0.95
+            },
+            {
+                "chunk_id": "chunk_2",
+                "chunk_content": "Authorization policy framework",
+                "chunk_index": 3,
+                "section_title": "Authorization",
+                "section_level": 2,
+                "doc_id": "ARCH-001",
+                "doc_title": "System Architecture",
+                "doc_type": "architecture",
+                "doc_version": "1.0.0",
+                "score": 0.87
+            }
+        ]
+
+        vector_ops = VectorOperations(mock_conn)
+
+        # Perform semantic search
+        query_embedding = [0.1] * 768
+        results = await vector_ops.semantic_search(
+            query_embedding=query_embedding,
+            limit=10,
+            doc_type="architecture"
+        )
+
+        # Verify query was called with correct parameters
+        assert mock_conn.execute_read.called
+        call_args = mock_conn.execute_read.call_args
+        query = call_args[0][0]
+        params = call_args[0][1]
+
+        # Verify query searches chunks via vector index
+        assert "chunk_embedding" in query
+        assert "CONTAINS" in query  # Should traverse to parent document
+        assert params["embedding"] == query_embedding
+        assert params["doc_type"] == "architecture"
+
+        # Verify results format
+        assert len(results) == 2
+
+        # Check first result structure
+        assert results[0]["chunk_id"] == "chunk_1"
+        assert results[0]["chunk_content"] == "Authentication implementation details"
+        assert results[0]["doc_id"] == "ARCH-001"
+        assert results[0]["doc_title"] == "System Architecture"
+        assert results[0]["score"] == 0.95
+
+        # Check results are ordered by score
+        assert results[0]["score"] >= results[1]["score"]
+
+    @pytest.mark.asyncio
+    async def test_semantic_search_with_no_doc_type_filter(self):
+        """Test semantic_search without document type filter."""
+        from unittest.mock import AsyncMock
+        from src.graph.vector_ops import VectorOperations
+        from src.graph.connection import Neo4jConnection
+
+        mock_conn = AsyncMock(spec=Neo4jConnection)
+        mock_conn.execute_read.return_value = []
+
+        vector_ops = VectorOperations(mock_conn)
+
+        # Search without doc_type filter
+        query_embedding = [0.1] * 768
+        results = await vector_ops.semantic_search(
+            query_embedding=query_embedding,
+            limit=5,
+            doc_type=None  # No filter
+        )
+
+        # Verify None was passed for doc_type
+        call_args = mock_conn.execute_read.call_args
+        params = call_args[0][1]
+        assert params["doc_type"] is None
+
 
 class TestAsyncUtils:
     """Test async/sync utilities."""
