@@ -8,9 +8,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+import json
+from datetime import datetime
 
 from src.graph.connection import get_connection, close_connection
 from src.api import agent, query, validation, admin, health
+from src.api.middleware import TimingMiddleware, JSONLoggingMiddleware
+from src.api.metrics import get_metrics_collector
 
 # Configure logging
 logging.basicConfig(
@@ -59,6 +63,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add timing and logging middleware
+app.add_middleware(TimingMiddleware)
+app.add_middleware(JSONLoggingMiddleware)
+
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
@@ -76,8 +84,24 @@ async def root():
         "version": "0.1.0",
         "status": "operational",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "metrics": "/metrics"
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """
+    Get application metrics.
+
+    Returns basic metrics about request processing,
+    validation results, and system performance.
+
+    Returns:
+        Dictionary with current metrics
+    """
+    collector = get_metrics_collector()
+    return collector.get_metrics()
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ from ..graph.vector_ops import VectorOperations
 from .document_adapter import DocumentGraphAdapter
 from .validation_bridge import ValidationGraphBridge
 from .request_adapter import RequestAdapter
+from .audit_storage import GraphAuditStorage
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ class LibrarianOrchestrator:
         self.doc_adapter = DocumentGraphAdapter(self.graph_ops, self.vector_ops)
         self.val_bridge = ValidationGraphBridge(self.graph_ops)
         self.req_adapter = RequestAdapter()
+        self.audit_storage = GraphAuditStorage(self.graph_ops)
 
         # Initialize validation engine with graph query capability
         self.validation_engine = validation_engine or ValidationEngine(
@@ -195,6 +197,26 @@ class LibrarianOrchestrator:
                     result=validation_result
                 )
                 logger.info("Stored validation audit trail")
+
+                # Also store in audit event system
+                audit_record = {
+                    "id": f"AUD-{request.id}",
+                    "timestamp": datetime.now().isoformat(),
+                    "event_type": "validation",
+                    "request_id": request.id,
+                    "agent_id": request.agent_id,
+                    "target_id": document.frontmatter.get("id"),
+                    "target_type": document.doc_type,
+                    "decision": validation_result.status.value,
+                    "result": validation_result.to_dict(),
+                    "metadata": {
+                        "processing_time_ms": validation_result.processing_time_ms,
+                        "violations_count": len(validation_result.violations),
+                        "file_path": file_path
+                    }
+                }
+                await self.audit_storage.store_audit_record(audit_record)
+                logger.debug("Stored audit event")
 
             # Calculate processing time
             processing_time_ms = (datetime.now() - start_time).total_seconds() * 1000
@@ -364,6 +386,26 @@ class LibrarianOrchestrator:
                     request=request,
                     result=validation_result
                 )
+
+                # Also store in audit event system
+                audit_record = {
+                    "id": f"AUD-{request.id}",
+                    "timestamp": datetime.now().isoformat(),
+                    "event_type": "validation",
+                    "request_id": request.id,
+                    "agent_id": request.agent_id,
+                    "target_id": document.frontmatter.get("id"),
+                    "target_type": document.doc_type,
+                    "decision": validation_result.status.value,
+                    "result": validation_result.to_dict(),
+                    "metadata": {
+                        "processing_time_ms": validation_result.processing_time_ms,
+                        "violations_count": len(validation_result.violations),
+                        "file_path": file_path,
+                        "action": "update"
+                    }
+                }
+                await self.audit_storage.store_audit_record(audit_record)
 
             processing_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 

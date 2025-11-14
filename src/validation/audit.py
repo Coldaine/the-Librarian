@@ -1,11 +1,14 @@
 """Audit trail logging for validation events."""
 
 import uuid
+import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 
 from .models import ValidationResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -145,7 +148,7 @@ class AuditLogger:
             try:
                 self.storage.store_audit_record(record.to_dict())
             except Exception as e:
-                print(f"Error storing audit record: {e}")
+                logger.error(f"Error storing audit record: {e}", exc_info=True)
 
     def get_record(self, record_id: str) -> Optional[AuditRecord]:
         """Retrieve an audit record by ID.
@@ -309,7 +312,7 @@ class AuditTrail:
                     "decision": response.status
                 })
             except Exception as e:
-                print(f"Failed to store audit record in graph: {e}")
+                logger.error(f"Failed to store audit record in graph: {e}", exc_info=True)
 
         return record_id
 
@@ -348,6 +351,6 @@ class AuditTrail:
                     "request_id": decision.request_id
                 })
             except Exception as e:
-                print(f"Failed to store decision in graph: {e}")
+                logger.error(f"Failed to store decision in graph: {e}", exc_info=True)
 
         return record_id
