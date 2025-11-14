@@ -122,4 +122,5 @@ class HealthResponse(BaseModel):
     neo4j: bool = Field(..., description="Neo4j connection status")
     ollama: bool = Field(..., description="Ollama connection status")
     version: str = Field(..., description="API version")
+    uptime_seconds: Optional[float] = Field(None, description="Application uptime in seconds")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional health details")

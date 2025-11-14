@@ -24,6 +24,7 @@ class NodeLabels:
     AGENT_REQUEST = "AgentRequest"
     PERSON = "Person"
     CHUNK = "Chunk"
+    AUDIT_EVENT = "AuditEvent"
 
 
 # Allowed node labels whitelist (for security - prevent Cypher injection)
@@ -36,6 +37,7 @@ ALLOWED_NODE_LABELS = {
     NodeLabels.AGENT_REQUEST,
     NodeLabels.PERSON,
     NodeLabels.CHUNK,
+    NodeLabels.AUDIT_EVENT,
 }
 
 
@@ -58,6 +60,8 @@ class RelationshipTypes:
     AUTHORED = "AUTHORED"
     CREATED_FROM = "CREATED_FROM"
     CONTAINS = "CONTAINS"
+    AUDITS = "AUDITS"
+    RECORDS = "RECORDS"
 
 
 # Allowed relationship types whitelist (for security - prevent Cypher injection)
@@ -78,6 +82,8 @@ ALLOWED_RELATIONSHIP_TYPES = {
     RelationshipTypes.AUTHORED,
     RelationshipTypes.CREATED_FROM,
     RelationshipTypes.CONTAINS,
+    RelationshipTypes.AUDITS,
+    RelationshipTypes.RECORDS,
 }
 
 
@@ -149,6 +155,10 @@ CONSTRAINT_QUERIES = [
     """
     CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS
     FOR (c:Chunk) REQUIRE c.id IS UNIQUE
+    """,
+    """
+    CREATE CONSTRAINT audit_id_unique IF NOT EXISTS
+    FOR (a:AuditEvent) REQUIRE a.id IS UNIQUE
     """
 ]
 
@@ -204,6 +214,18 @@ COMPOSITE_INDEX_QUERIES = [
     """
     CREATE INDEX request_agent_time IF NOT EXISTS
     FOR (ar:AgentRequest) ON (ar.agent_id, ar.timestamp)
+    """,
+    """
+    CREATE INDEX audit_timestamp IF NOT EXISTS
+    FOR (a:AuditEvent) ON (a.timestamp)
+    """,
+    """
+    CREATE INDEX audit_agent IF NOT EXISTS
+    FOR (a:AuditEvent) ON (a.agent_id)
+    """,
+    """
+    CREATE INDEX audit_event_type IF NOT EXISTS
+    FOR (a:AuditEvent) ON (a.event_type)
     """
 ]
 
