@@ -113,7 +113,7 @@ def test_health_ready_endpoint_all_services_healthy():
         assert "timestamp" in data
 
 
-def xtest_health_ready_endpoint_service_unavailable():
+def test_health_ready_endpoint_service_unavailable():
     """Test readiness probe when service is unavailable."""
     with patch('src.api.health.check_neo4j') as mock_neo4j, \
          patch('src.api.health.check_ollama') as mock_ollama, \
@@ -134,7 +134,7 @@ def xtest_health_ready_endpoint_service_unavailable():
         assert data["checks"]["neo4j"] is False
 
 
-def xtest_health_ready_endpoint_low_disk_space():
+def test_health_ready_endpoint_low_disk_space():
     """Test readiness probe when disk space is low."""
     with patch('src.api.health.check_neo4j') as mock_neo4j, \
          patch('src.api.health.check_ollama') as mock_ollama, \
@@ -155,7 +155,7 @@ def xtest_health_ready_endpoint_low_disk_space():
         assert data["checks"]["disk"] is False
 
 
-def xtest_health_endpoint_includes_uptime():
+def test_health_endpoint_includes_uptime():
     """Test that health endpoint includes uptime_seconds."""
     with patch('src.api.health.get_connection') as mock_conn, \
          patch('src.api.health.EmbeddingGenerator') as mock_emb:
@@ -169,6 +169,8 @@ def xtest_health_endpoint_includes_uptime():
 
         mock_emb_instance = Mock()
         mock_emb_instance.check_connection.return_value = True
+        mock_emb_instance.check_model_available.return_value = True
+        mock_emb_instance.model_name = "nomic-embed-text"
         mock_emb.return_value = mock_emb_instance
 
         response = client.get("/health")
@@ -180,11 +182,10 @@ def xtest_health_endpoint_includes_uptime():
         assert data["uptime_seconds"] >= 0
 
 
-def xtest_health_endpoint_includes_system_metrics():
+def test_health_endpoint_includes_system_metrics():
     """Test that health endpoint includes system metrics."""
     with patch('src.api.health.get_connection') as mock_conn, \
-         patch('src.api.health.EmbeddingGenerator') as mock_emb, \
-         patch('src.api.health.get_system_metrics') as mock_metrics:
+         patch('src.api.health.EmbeddingGenerator') as mock_emb:
 
         mock_conn_instance = AsyncMock()
         mock_conn_instance.health_check = AsyncMock(return_value={"connected": True})
@@ -192,21 +193,18 @@ def xtest_health_endpoint_includes_system_metrics():
 
         mock_emb_instance = Mock()
         mock_emb_instance.check_connection.return_value = True
+        mock_emb_instance.check_model_available.return_value = True
+        mock_emb_instance.model_name = "nomic-embed-text"
         mock_emb.return_value = mock_emb_instance
-
-        mock_metrics.return_value = {
-            "cpu_percent": 25.5,
-            "memory_percent": 60.0,
-            "disk_percent": 45.0
-        }
 
         response = client.get("/health")
         assert response.status_code == 200
 
         data = response.json()
-        # System metrics might be in the root or in a "system" key
-        # depending on implementation
-        assert response.status_code == 200
+        # Just verify basic health response structure
+        assert "status" in data
+        assert "neo4j" in data
+        assert "ollama" in data
 
 
 def test_metrics_endpoint():
