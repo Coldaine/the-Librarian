@@ -36,17 +36,19 @@ async def liveness():
     }
 
 
-@router.get("/health/ready")
+@router.get("/health/ready", status_code=200)
 async def readiness():
     """
     Kubernetes readiness probe.
 
     Returns 200 if the application is ready to serve traffic.
-    Checks that all critical dependencies are available.
+    Returns 503 if any critical dependency is unavailable.
 
     Returns:
         Readiness status with dependency checks
     """
+    from fastapi.responses import JSONResponse
+
     checks = {
         "neo4j": await check_neo4j(),
         "ollama": await check_ollama(),
@@ -55,13 +57,16 @@ async def readiness():
     }
 
     all_ready = all(checks.values())
-    status_code = status.HTTP_200_OK if all_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+    response_status = status.HTTP_200_OK if all_ready else status.HTTP_503_SERVICE_UNAVAILABLE
 
-    return {
-        "status": "ready" if all_ready else "not_ready",
-        "checks": checks,
-        "timestamp": datetime.utcnow().isoformat()
-    }
+    return JSONResponse(
+        status_code=response_status,
+        content={
+            "status": "ready" if all_ready else "not_ready",
+            "checks": checks,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
 
 
 @router.get("/health", response_model=HealthResponse)
