@@ -13,7 +13,7 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # Numerical Operations
-numpy==1.24.3
+numpy==1.26.4
 
 # Embedding Generation
 ollama==0.1.6
