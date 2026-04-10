@@ -88,7 +88,6 @@ def validate_label(label: str) -> bool:
     Validate that a label is from the allowed set.
 
     DEPRECATED: Use validate_node_label() from schema module instead.
-    Kept for backward compatibility.
 
     Args:
         label: Node label to validate
@@ -97,31 +96,6 @@ def validate_label(label: str) -> bool:
         True if valid, False otherwise
     """
     return label in ALLOWED_NODE_LABELS
-
-
-def validate_relationship_type(rel_type: str) -> bool:
-    """
-    Validate that a relationship type is from the allowed set.
-
-    Args:
-        rel_type: Relationship type to validate
-
-    Returns:
-        True if valid, False otherwise
-    """
-    allowed_types = {
-        RelationshipTypes.IMPLEMENTS,
-        RelationshipTypes.DEFINES,
-        RelationshipTypes.MODIFIES,
-        RelationshipTypes.DEPENDS_ON,
-        RelationshipTypes.SUPERSEDES,
-        RelationshipTypes.REFERENCES,
-        RelationshipTypes.TRIGGERS,
-        RelationshipTypes.HAS_CHUNK,
-        RelationshipTypes.SIMILAR_TO
-    }
-
-    return rel_type in allowed_types
 
 
 class GraphOperations:
@@ -338,13 +312,10 @@ class GraphOperations:
         Raises:
             ValueError: If either node doesn't exist
         """
-        # Validate labels and relationship type
-        if not validate_label(from_label):
-            raise ValueError(f"Invalid source node label: {from_label}")
-        if not validate_label(to_label):
-            raise ValueError(f"Invalid target node label: {to_label}")
-        if not validate_relationship_type(rel_type):
-            raise ValueError(f"Invalid relationship type: {rel_type}")
+        # Validate labels and relationship type (raises ValueError if invalid)
+        validate_node_label(from_label)
+        validate_node_label(to_label)
+        validate_relationship_type(rel_type)
 
         properties = properties or {}
 
